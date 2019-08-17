@@ -8,7 +8,9 @@
 [![](https://img.shields.io/badge/github-cytopia%2Faws--ec2--sg--exporter-red.svg)](https://github.com/cytopia/aws-ec2-sg-exporter "github.com/cytopia/aws-ec2-sg-exporter")
 [![License](https://img.shields.io/badge/license-MIT-%233DA639.svg)](https://opensource.org/licenses/MIT)
 
-A dockerized Prometheus exporter that compares desired/wanted IPv4/IPv6 CIDR against currently applied inbound CIDR rules in your security group(s).
+![Grafana](doc/grafana.png "Grafana Example")
+
+A dockerized Prometheus exporter that compares desired/wanted IPv4/IPv6 CIDR against currently applied inbound CIDR rules in your AWS security group(s).
 
 [![Docker hub](http://dockeri.co/image/cytopia/aws-ec2-sg-exporter?&kill_cache=1)](https://hub.docker.com/r/cytopia/aws-ec2-sg-exporter)
 
