@@ -71,6 +71,8 @@ You can specify up to 4 security group checks: `SG1_*`, `SG2_*`, `SG3_*` and `SG
 | `AWS_SECRET_ACCESS_KEY` | The AWS secret key (required to connect to AWS to check the sg rules) |
 | `AWS_SESSION_TOKEN`     | (Optional) The AWS session token |
 | | |
+| `UPDATE_TIME`           | Time interval in sec for how often to update metrics (default: `60`) |
+| | |
 | `SG1_NAME`              | Name of the security group on AWS |
 | `SG1_REGION`            | Region the security group resides in |
 | `SG1_PROTO`             | Security group rule protocol: `tcp`, `udp`, `icmp` or a protocol number |
