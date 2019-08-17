@@ -33,6 +33,7 @@ get_applied_sg_ip4_addr() {
 		--region "${region}" \
 		--filters "Name=tag:Name,Values=${name}" \
 		--query 'SecurityGroups[*].IpPermissions' \
+		| dd obs=1M 2>/dev/null \
 		| jq -r ".[][]
 			| select(.IpProtocol | contains(\"${proto}\") )
 			| select(.FromPort | contains(${from_port}) )
@@ -54,6 +55,7 @@ get_applied_sg_ip6_addr() {
 		--region "${region}" \
 		--filters "Name=tag:Name,Values=${name}" \
 		--query 'SecurityGroups[*].IpPermissions' \
+		| dd obs=1M 2>/dev/null \
 		| jq -r ".[][]
 			| select(.IpProtocol | contains(\"${proto}\") )
 			| select(.FromPort | contains(${from_port}) )
@@ -66,7 +68,7 @@ get_applied_sg_ip6_addr() {
 ### Evalute command to get newline-separated wanted IPv4 CIDR
 ###
 get_wanted_sg_ip4_addr() {
-	eval "${1}" | sort
+	eval "${1}" | dd obs=1M 2>/dev/null | sort
 }
 
 
@@ -74,7 +76,7 @@ get_wanted_sg_ip4_addr() {
 ### Evalute command to get newline-separated wanted IPv6 CIDR
 ###
 get_wanted_sg_ip6_addr() {
-	eval "${1}" | sort
+	eval "${1}" | dd obs=1M 2>/dev/null | sort
 }
 
 
@@ -128,7 +130,7 @@ compare() {
 		fi
 
 		for ip in ${wanted}; do
-			if echo "${applied}" | grep -Eq "^${ip}\$"; then
+			if echo "${applied}" | dd obs=1M 2>/dev/null | grep -Eq "^${ip}\$"; then
 				print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "1"
 			else
 				print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "0"
