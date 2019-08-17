@@ -4,15 +4,6 @@ set -e
 set -u
 set -o pipefail
 
-# -------------------------------------------------------------------------------------------------
-# V A R I A B L E S
-# -------------------------------------------------------------------------------------------------
-
-###
-### Program name
-###
-NAME="update-metrics.sh"
-
 
 # -------------------------------------------------------------------------------------------------
 # F U N C T I O N S
@@ -55,10 +46,10 @@ while true; do
 	if /usr/bin/aws-ec2-sg-exporter > /var/www/index.html.new; then
 		END=$(date +%s)
 		mv -f /var/www/index.html.new /var/www/index.html
-		printf "[OK]  %s (%s): %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${NAME}" "Metrics updated in $(( ${END} - ${START} )) sec"
+		printf "[OK]  %s (%s): %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "update-metrics.sh" "Metrics updated in $(( ${END} - ${START} )) sec"
 	else
 		END=$(date +%s)
-		>&2 printf "[ERR] %s (%s): %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${NAME}" "Failed to update metrics after $(( ${END} - ${START} )) sec"
+		>&2 printf "[ERR] %s (%s): %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "update-metrics.sh" "Failed to update metrics after $(( ${END} - ${START} )) sec"
 		false
 	fi
 done
