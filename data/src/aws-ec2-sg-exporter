@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+
+set -e
+set -u
+set -o pipefail
+
+
+# -------------------------------------------------------------------------------------------------
+# V A R I A B L E S
+# -------------------------------------------------------------------------------------------------
+
+###
+### The Prometheus metric name
+###
+METRIC_NAME="aws_ec2_sg_compare"
+
+
+
+# -------------------------------------------------------------------------------------------------
+# F U N C T I O N S
+# -------------------------------------------------------------------------------------------------
+
+###
+### Get newline-separated AWS Security Group IPv4 CIDR by name, protocol and from_port
+###
+get_applied_sg_ip4_addr() {
+	local name="${1}"
+	local region="${2}"
+	local from_port="${3}"
+	local proto="${4}"
+
+	aws ec2 describe-security-groups \
+		--region "${region}" \
+		--filters "Name=tag:Name,Values=${name}" \
+		--query 'SecurityGroups[*].IpPermissions' \
+		| jq -r ".[][]
+			| select(.IpProtocol | contains(\"${proto}\") )
+			| select(.FromPort | contains(${from_port}) )
+			| .IpRanges[].CidrIp" \
+		| sort
+}
+
+
+###
+### Get newline-separated AWS Security Group IPv6 CIDR by name, protocol and from_port
+###
+get_applied_sg_ip6_addr() {
+	local name="${1}"
+	local region="${2}"
+	local from_port="${3}"
+	local proto="${4}"
+
+	aws ec2 describe-security-groups \
+		--region "${region}" \
+		--filters "Name=tag:Name,Values=${name}" \
+		--query 'SecurityGroups[*].IpPermissions' \
+		| jq -r ".[][]
+			| select(.IpProtocol | contains(\"${proto}\") )
+			| select(.FromPort | contains(${from_port}) )
+			| .Ipv6Ranges[].CidrIpv6" \
+		| sort
+}
+
+
+###
+### Evalute command to get newline-separated wanted IPv4 CIDR
+###
+get_wanted_sg_ip4_addr() {
+	eval "${1}" | sort
+}
+
+
+###
+### Evalute command to get newline-separated wanted IPv6 CIDR
+###
+get_wanted_sg_ip6_addr() {
+	eval "${1}" | sort
+}
+
+
+###
+### Print one metric line in Prometheus format
+###
+print_prom_metric() {
+	local name="${1}"
+	local region="${2}"
+	local proto="${3}"
+	local from_port="${4}"
+	local version="${5}"
+	local cidr="${6}"
+	local counter="${7}"
+
+	printf "${METRIC_NAME}{name=\"%s\",region=\"%s\",proto=\"%s\",from_port=\"%s\",ip=\"%s\",cidr=\"%s\"} %s\n" \
+		"${name}" \
+		"${region}" \
+		"${proto}" \
+		"${from_port}" \
+		"${version}" \
+		"${cidr}" \
+		"${counter}"
+}
+
+
+###
+### Compare applied vs wanted IPv4/6 CIDR and output Prometheus metrics for each security group
+###
+compare() {
+	local name="${1}"
+	local region="${2}"
+	local proto="${3}"
+	local from_port="${4}"
+	local ip4_cmd="${5}"
+	local ip6_cmd="${6}"
+
+	local applied=
+	local wanted=
+	local version=
+
+	if [ -n "${name:-}" ]; then
+		if [ -n "${ip4_cmd:-}" ]; then
+			applied="$( get_applied_sg_ip4_addr "${name}" "${region}" "${from_port}" "${proto}" )"
+			wanted="$( get_wanted_sg_ip4_addr "${ip4_cmd}" )"
+			version="v4"
+		else
+			applied="$( get_applied_sg_ip6_addr "${name}" "${region}" "${from_port}" "${proto}" )"
+			wanted="$( get_wanted_sg_ip6_addr "${ip6_cmd}" )"
+			version="v6"
+		fi
+
+		for ip in ${wanted}; do
+			if echo "${applied}" | grep -Eq "^${ip}\$"; then
+				print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "1"
+			else
+				print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "0"
+			fi
+		done
+	fi
+}
+
+
+
+# --------------------------------------------------------------------------------------------------
+# PRE-FLIGHT CHECK
+# --------------------------------------------------------------------------------------------------
+
+###
+### Ensure 'aws' binary is available
+###
+if ! command -v aws >/dev/null 2>&1; then
+	>&2 "Error, 'aws' binary is required"
+	exit 1
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+	>&2 "Error, 'jq' binary is required"
+	exit 1
+fi
+
+
+
+###
+### Copy environment variables to bash variables
+###
+SG1_NAME="$(      env | grep '^SG1_NAME='      | sed 's/^SG1_NAME=//g'     || true )"
+SG1_REGION="$(    env | grep '^SG1_REGION='    | sed 's/^SG1_REGION=//g'   || true )"
+SG1_PROTO="$(     env | grep '^SG1_PROTO='     | sed 's/^SG1_PROTO=//g'    || true )"
+SG1_FROM_PORT="$( env | grep '^SG1_FROM_PORT=' | sed 's/^SG1_FROM_PORT=//g'|| true )"
+SG1_IP4_CMD="$(   env | grep '^SG1_IP4_CMD='   | sed 's/^SG1_IP4_CMD=//g'  || true )"
+SG1_IP6_CMD="$(   env | grep '^SG1_IP6_CMD='   | sed 's/^SG1_IP6_CMD=//g'  || true )"
+
+SG2_NAME="$(      env | grep '^SG2_NAME='      | sed 's/^SG2_NAME=//g'     || true )"
+SG2_REGION="$(    env | grep '^SG2_REGION='    | sed 's/^SG2_REGION=//g'   || true )"
+SG2_PROTO="$(     env | grep '^SG2_PROTO='     | sed 's/^SG2_PROTO=//g'    || true )"
+SG2_FROM_PORT="$( env | grep '^SG2_FROM_PORT=' | sed 's/^SG2_FROM_PORT=//g'|| true )"
+SG2_IP4_CMD="$(   env | grep '^SG2_IP4_CMD='   | sed 's/^SG2_IP4_CMD=//g'  || true )"
+SG2_IP6_CMD="$(   env | grep '^SG2_IP6_CMD='   | sed 's/^SG2_IP6_CMD=//g'  || true )"
+
+SG3_NAME="$(      env | grep '^SG3_NAME='      | sed 's/^SG3_NAME=//g'     || true )"
+SG3_REGION="$(    env | grep '^SG3_REGION='    | sed 's/^SG3_REGION=//g'   || true )"
+SG3_PROTO="$(     env | grep '^SG3_PROTO='     | sed 's/^SG3_PROTO=//g'    || true )"
+SG3_FROM_PORT="$( env | grep '^SG3_FROM_PORT=' | sed 's/^SG3_FROM_PORT=//g'|| true )"
+SG3_IP4_CMD="$(   env | grep '^SG3_IP4_CMD='   | sed 's/^SG3_IP4_CMD=//g'  || true )"
+SG3_IP6_CMD="$(   env | grep '^SG3_IP6_CMD='   | sed 's/^SG3_IP6_CMD=//g'  || true )"
+
+SG4_NAME="$(      env | grep '^SG4_NAME='      | sed 's/^SG4_NAME=//g'     || true )"
+SG4_REGION="$(    env | grep '^SG4_REGION='    | sed 's/^SG4_REGION=//g'   || true )"
+SG4_PROTO="$(     env | grep '^SG4_PROTO='     | sed 's/^SG4_PROTO=//g'    || true )"
+SG4_FROM_PORT="$( env | grep '^SG4_FROM_PORT=' | sed 's/^SG4_FROM_PORT=//g'|| true )"
+SG4_IP4_CMD="$(   env | grep '^SG4_IP4_CMD='   | sed 's/^SG4_IP4_CMD=//g'  || true )"
+SG4_IP6_CMD="$(   env | grep '^SG4_IP6_CMD='   | sed 's/^SG4_IP6_CMD=//g'  || true )"
+
+
+
+# -------------------------------------------------------------------------------------------------
+# E N T R Y P O I N T
+# -------------------------------------------------------------------------------------------------
+
+###
+###
+###
+echo "# HELP ${METRIC_NAME} Determines If CIDR is applied to security group."
+echo "# TYPE ${METRIC_NAME} counter"
+
+
+compare "${SG1_NAME:-}" "${SG1_REGION:-}" "${SG1_PROTO:-}" "${SG1_FROM_PORT:-}" "${SG1_IP4_CMD:-}" "${SG1_IP6_CMD:-}"
+compare "${SG2_NAME:-}" "${SG2_REGION:-}" "${SG2_PROTO:-}" "${SG2_FROM_PORT:-}" "${SG2_IP4_CMD:-}" "${SG2_IP6_CMD:-}"
+compare "${SG3_NAME:-}" "${SG3_REGION:-}" "${SG3_PROTO:-}" "${SG3_FROM_PORT:-}" "${SG3_IP4_CMD:-}" "${SG3_IP6_CMD:-}"
+compare "${SG4_NAME:-}" "${SG4_REGION:-}" "${SG4_PROTO:-}" "${SG4_FROM_PORT:-}" "${SG4_IP4_CMD:-}" "${SG4_IP6_CMD:-}"
