@@ -1,5 +1,12 @@
 # AWS Security Group exporter for Prometheus
 
+**[Motivation](#motivation)** |
+**[How does it work](#how-does-it-work)** |
+**[Requirements](#requirements)** |
+**[Docker image settings](#docker-image-settings)** |
+**[Examples](#examples)** |
+**[Grafana setup](#grafana-setup)**
+
 [![Build Status](https://travis-ci.com/cytopia/aws-ec2-sg-exporter.svg?branch=master)](https://travis-ci.com/cytopia/aws-ec2-sg-exporter)
 [![Tag](https://img.shields.io/github/tag/cytopia/aws-ec2-sg-exporter.svg)](https://github.com/cytopia/aws-ec2-sg-exporter/releases)
 [![](https://images.microbadger.com/badges/version/cytopia/aws-ec2-sg-exporter:latest.svg?&kill_cache=1)](https://microbadger.com/images/cytopia/aws-ec2-sg-exporter:latest "aws-ec2-sg-exporter")
@@ -8,7 +15,7 @@
 [![](https://img.shields.io/badge/github-cytopia%2Faws--ec2--sg--exporter-red.svg)](https://github.com/cytopia/aws-ec2-sg-exporter "github.com/cytopia/aws-ec2-sg-exporter")
 [![License](https://img.shields.io/badge/license-MIT-%233DA639.svg)](https://opensource.org/licenses/MIT)
 
-![Grafana](doc/grafana.png "Grafana Example")
+![Grafana](doc/grafana-graph.png "Grafana Graph Example")
 
 A dockerized Prometheus exporter that compares desired/wanted IPv4/IPv6 CIDR against currently applied inbound CIDR rules in your AWS security group(s).
 
@@ -123,10 +130,9 @@ and also match the from port (`SG*_FROM_PORT`).
 ## Examples
 
 ### Scenario 1 - Travis
-
 Check if your security group named `my-sg` (in us-east-1) allows all inbound IPv4 addresses from Travis-CI via `tcp` on `https`.
 
-#### Scenario 1: Desired/wanted IP CIDR
+#### Desired/wanted IP CIDR
 Ensure you have a working command which can be interpretated by `eval` and that outputs CIDR (with `/[0-9]+` appended) of your desired ranges:
 ```bash
 $ eval "dig +short nat.travisci.net | xargs -n1 -I% echo \"%/32\""
@@ -140,7 +146,7 @@ $ eval "dig +short nat.travisci.net | xargs -n1 -I% echo \"%/32\""
 ...
 ```
 
-#### Scenario 1: Run `aws-ec2-sg-exporter`
+#### Run `aws-ec2-sg-exporter`
 ```bash
 docker run -it --rm \
 	-p 9000:8080 \
@@ -157,8 +163,11 @@ docker run -it --rm \
 	cytopia/aws-ec2-sg-exporter
 ```
 
-#### Scenario 1: Check output
+#### Check output
 Check the output via curl:
+```bash
+$ curl localhost:9000`
+```
 ```bash
 # HELP aws_ec2_sg_compare Determines If CIDR is applied to security group.
 # TYPE aws_ec2_sg_compare counter
@@ -175,10 +184,27 @@ As you can see, the last line returns a `0`, which means this IP CIDR is missing
 
 ### Scenario 2 - Cloudfront
 
-Check if your security group named `my-sg` (in us-east-1) allows all inbound IPv6 addresses from Cloudfront edge-nodes via `tcp` on `https`.
+* Check if your security group named `my-sg4` (in us-east-1) allows all inbound IPv4 addresses from Cloudfront edge-nodes via `tcp` on `https`.
+* Check if your security group named `my-sg6` (in us-east-1) allows all inbound IPv6 addresses from Cloudfront edge-nodes via `tcp` on `https`.
 
-#### Scenario 2: Desired/wanted IP CIDR
+#### Desired/wanted IP CIDR
 Ensure you have a working command which can be interpretated by `eval` and that outputs CIDR (with `/[0-9]+` appended) of your desired ranges:
+```bash
+$ eval "curl -sS https://ip-ranges.amazonaws.com/ip-ranges.json \
+	| jq -r '.prefixes \
+		| sort_by(.ip_prefix)[] \
+		| select( .service | contains(\"CLOUDFRONT\")) \
+		| select ( .region | test(\"^(GLOBAL|us-|eu-)\")) \
+		| .ip_prefix'"
+```
+```
+13.224.0.0/14
+13.249.0.0/16
+13.32.0.0/15
+13.35.0.0/16
+13.52.204.0/23
+...
+```
 ```bash
 $ eval "curl -sS https://ip-ranges.amazonaws.com/ip-ranges.json \
 	| jq -r '.ipv6_prefixes \
@@ -196,7 +222,7 @@ $ eval "curl -sS https://ip-ranges.amazonaws.com/ip-ranges.json \
 ...
 ```
 
-#### Scenario 2: Run `aws-ec2-sg-exporter`
+#### Run `aws-ec2-sg-exporter`
 ```bash
 docker run -it --rm \
 	-p 9000:8080 \
@@ -205,28 +231,56 @@ docker run -it --rm \
 	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
 	-e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
 	\
-	-e SG1_NAME="my-sg" \
+	-e SG1_NAME="my-sg4" \
 	-e SG1_REGION="us-east-1" \
 	-e SG1_PROTO="tcp" \
 	-e SG1_FROM_PORT="443" \
-	-e SG1_IP6_CMD="curl -sS https://ip-ranges.amazonaws.com/ip-ranges.json | jq -r '.ipv6_prefixes | sort_by(.ipv6_prefixes)[] | select( .service | contains(\"CLOUDFRONT\")) | select ( .region | test(\"^(GLOBAL|us-|eu-)\")) | .ipv6_prefix'" \
+	-e SG1_IP4_CMD="curl -sS https://ip-ranges.amazonaws.com/ip-ranges.json | jq -r '.prefixes | sort_by(.ip_prefix)[] | select( .service | contains(\"CLOUDFRONT\")) | select ( .region | test(\"^(GLOBAL|us-|eu-)\")) | .ip_prefix'" \
+	\
+	-e SG2_NAME="my-sg6" \
+	-e SG2_REGION="us-east-1" \
+	-e SG2_PROTO="tcp" \
+	-e SG2_FROM_PORT="443" \
+	-e SG2_IP6_CMD="curl -sS https://ip-ranges.amazonaws.com/ip-ranges.json | jq -r '.ipv6_prefixes | sort_by(.ipv6_prefixes)[] | select( .service | contains(\"CLOUDFRONT\")) | select ( .region | test(\"^(GLOBAL|us-|eu-)\")) | .ipv6_prefix'" \
 	cytopia/aws-ec2-sg-exporter
 ```
 
-#### Scenario 2: Check output
+#### Check output
 Check the output via curl:
+```bash
+$ curl localhost:9000`
+```
 ```bash
 # HELP aws_ec2_sg_compare Determines If CIDR is applied to security group.
 # TYPE aws_ec2_sg_compare counter
-aws_ec2_sg_compare{name="my-sg",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:eee::/48"} 1
-aws_ec2_sg_compare{name="my-sg",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:4000::/36"} 0
-aws_ec2_sg_compare{name="my-sg",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:3000::/36"} 1
-aws_ec2_sg_compare{name="my-sg",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:f000::/36"} 1
-aws_ec2_sg_compare{name="my-sg",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:fff::/48"} 1
+aws_ec2_sg_compare{name="my-sg4",region="us-east-1",proto="tcp",from_port="443",ip="v4",cidr="13.224.0.0/14"} 1
+aws_ec2_sg_compare{name="my-sg4",region="us-east-1",proto="tcp",from_port="443",ip="v4",cidr="13.249.0.0/16"} 0
+aws_ec2_sg_compare{name="my-sg4",region="us-east-1",proto="tcp",from_port="443",ip="v4",cidr="13.32.0.0/15"} 1
+aws_ec2_sg_compare{name="my-sg4",region="us-east-1",proto="tcp",from_port="443",ip="v4",cidr="13.35.0.0/16"} 1
+aws_ec2_sg_compare{name="my-sg4",region="us-east-1",proto="tcp",from_port="443",ip="v4",cidr="13.52.204.0/23"} 1
+...
+aws_ec2_sg_compare{name="my-sg6",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:eee::/48"} 1
+aws_ec2_sg_compare{name="my-sg6",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:4000::/36"} 1
+aws_ec2_sg_compare{name="my-sg6",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:3000::/36"} 1
+aws_ec2_sg_compare{name="my-sg6",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:f000::/36"} 1
+aws_ec2_sg_compare{name="my-sg6",region="us-east-1",proto="tcp",from_port="443",ip="v6",cidr="2600:9000:fff::/48"} 0
 ...
 ```
 
-As you can see, the second line returns a `0`, which means this IP CIDR is missing in your security group.
+As you can see, the second line ipv4 address returns a `0` and the last ipv6 address returns a `0`, which means these IP CIDR are missing in your security groups.
+
+
+## Grafana setup
+
+* Align the `Min time interval` with what you have set `UPDATE_TIME` to.
+* Add you metrics by the name of your specified security group name
+* Set the legend to `{{ cidr }}` to have only the CIDR displayed
+
+![Grafana](doc/grafana-setup.png "Grafana Setup Example")
+
+Once this is done, your graph will look similar to this one:
+
+![Grafana](doc/grafana-graph.png "Grafana Graph Example")
 
 
 ## License
