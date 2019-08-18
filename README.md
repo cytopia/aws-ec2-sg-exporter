@@ -127,6 +127,32 @@ and also match the from port (`SG*_FROM_PORT`).
 | Up to you | `8080`   | Where the `aws-ec2-sg-exporter` provides metrics via HTTP |
 
 
+## Metrics
+
+This exporter outputs metrics in the following format:
+```bash
+# HELP aws_ec2_sg_compare Determines If CIDR is applied to security group.
+# TYPE aws_ec2_sg_compare counter
+aws_ec2_sg_compare{name="sg-name",region="us-east-1",proto="tcp",from_port="443",ip="v4",cidr="10.4.1.1/32",sg_id="sg-xxxxx",errno="0",error=""} 1
+```
+The following table describes each of the key/value paris:
+
+| Key         | Value |
+|-------------|-------|
+| `name`      | The security group name as specified by `SG*_NAME` |
+| `region`    | The security group region as specified by `SG*_REGION` |
+| `proto`     | The security group rule protocol as specified by `SG*_PROTO` |
+| `from_port` | The security group rule from port as specified by `SG*_FROM_PORT` |
+| `ip`        | IP version of desired/wanted CIDR to be available in your security group by `proto` and `from_port` |
+| `cidr`      | The desired/wanted IP to be available in your security group by `proto` and `from_port` |
+| `sg_id`     | The security group ID found by `name` and `region`. If this is empty then either zero or more multiple security groups were found. |
+| `errno`     | 0: One security group was found (OK)<br/>1: No security group was found (ERR)<br/>2: Multiple security groups were found (ERR) |
+| `error`     | The corresponding error message for `errno` |
+
+* A value of `1` means the desired/wanted IP CIDR is applied to the security group
+* A value of `0` means the desired/wanted IP CIDR is not applied to the security group
+
+
 ## Examples
 
 ### Scenario 1 - Travis
