@@ -17,7 +17,7 @@
 [![](https://img.shields.io/badge/github-cytopia%2Faws--ec2--sg--exporter-red.svg)](https://github.com/cytopia/aws-ec2-sg-exporter "github.com/cytopia/aws-ec2-sg-exporter")
 [![License](https://img.shields.io/badge/license-MIT-%233DA639.svg)](https://opensource.org/licenses/MIT)
 
-![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-graph.png "Grafana Graph Example")
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-dash.png "Grafana Graph Example")
 
 A dockerized<strong><sup>[1]</sup></strong> Prometheus exporter that compares desired/wanted
 IPv4/IPv6 CIDR against currently applied inbound CIDR rules by protocol and port number in your AWS
@@ -321,15 +321,29 @@ As you can see, the second line ipv4 address returns a `0` and the last ipv6 add
 
 ## Grafana setup
 
+### Graphs
+
 * Align the `Min time interval` with what you have set `UPDATE_TIME` to.
 * Add you metrics by the name of your specified security group name
 * Set the legend to `{{ cidr }}` to have only the CIDR displayed
 
-![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-setup.png "Grafana Setup Example")
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-graph-setup.png "Grafana Graph Setup Example")
 
 Once this is done, your graph will look similar to this one:
 
 ![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-graph.png "Grafana Graph Example")
+
+### Single Stat
+
+* Align the `Min time interval` with what you have set `UPDATE_TIME` to.
+* Add you metrics by the name of your specified security group name
+* `sum()` gives your the total sum of values (`0` and `1`) and `count()` will give you the total number of available IP addresses
+
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-single-stat-setup.png "Grafana Single Stat Setup Example")
+
+Once this is done, your single stat will look similar to this one:
+
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-single-stat.png "Grafana Single Stat Example")
 
 
 ## Usage without Docker
