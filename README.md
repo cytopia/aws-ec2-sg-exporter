@@ -399,7 +399,7 @@ Consider to add a buffer in between:
 curl http://some-page.tld | dd obs=1M 2>/dev/null | grep -E '^[.0-9]+/[0-9]+$';
 ```
 
-See here: https://superuser.com/questions/554855/how-can-i-fix-a-broken-pipe-error/554896
+See here: https://superuser.com/a/642932/705357
 
 
 ## License
