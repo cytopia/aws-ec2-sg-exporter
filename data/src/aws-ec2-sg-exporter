@@ -37,8 +37,7 @@ get_applied_sg_ip4_addr() {
 		| jq -r ".[][]
 			| select(.IpProtocol | contains(\"${proto}\") )
 			| select(.FromPort | contains(${from_port}) )
-			| .IpRanges[].CidrIp" \
-		| sort
+			| .IpRanges[].CidrIp"
 }
 
 
@@ -59,8 +58,7 @@ get_applied_sg_ip6_addr() {
 		| jq -r ".[][]
 			| select(.IpProtocol | contains(\"${proto}\") )
 			| select(.FromPort | contains(${from_port}) )
-			| .Ipv6Ranges[].CidrIpv6" \
-		| sort
+			| .Ipv6Ranges[].CidrIpv6"
 }
 
 
