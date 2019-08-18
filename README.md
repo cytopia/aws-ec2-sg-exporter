@@ -309,6 +309,61 @@ Once this is done, your graph will look similar to this one:
 ![Grafana](doc/grafana-graph.png "Grafana Graph Example")
 
 
+## Usage without Docker
+
+Docker is not necessarily required and you can simply use the exporter bash script: [aws-ec2-sg-exporter](data/src/aws-ec2-sg-exporter).
+
+By doing so, you need to ensure you have all requirements installed on your system (`aws` and `jq` binary as well as `bash` itself).
+
+Additionally you will have to make sure the script's `stdout` will somehow be served by a webserver.
+The recommended method is to have some mechanism which writes the script's output atomically to a static html file and a web server will simply serve it.
+
+[aws-ec2-sg-exporter](data/src/aws-ec2-sg-exporter) will read all configuration from the shell's environment, so in order to use this script you need to export
+all values to your env. See [Environment variables](#environment-variables) for possible values.
+
+
+## Error handling
+
+The exporter writes all errors to `stderr` regardless of using Docker or the standalone [aws-ec2-sg-exporter](data/src/aws-ec2-sg-exporter) script.
+
+### Expected errors
+
+**An error occurred (RequestExpired) when calling the DescribeSecurityGroups operation: Request has expired.**
+
+In case you are using IAM roles, your session has simply been expired and needs to be renewed.
+
+
+**[ERR] 2019-08-18 10:55:11 (aws-ec2-sg-exporter): No sg found by name: sg-name22 in region: us-east-1**
+
+A security group could not be found by name and region. The exporter will continue to run and output
+Prometheus metrics, but will mark all desired/wanted IP CIDR as not found in your security group.
+
+
+**[ERR] 2019-08-18 10:56:17 (aws-ec2-sg-exporter): Multiple sg found by name: sg-name-* in region: us-east-1: sg-xxxxx,sg-yyyyy**
+
+Multiple security groups have been found by the specified name and region. The exporter will continue to run and output
+Prometheus metrics, but will mark all desired/wanted IP CIDR as not found in your security group.
+
+
+### Unexpected errors
+
+**write error: Broken pipe**
+
+This is a very rare condition and will most likely be caused by using broken shell pipes (`|`)
+in your commands specified via `SG*_IP4_CMD` or `SG*_IP6_CMD`.
+
+In case you are using something like this:
+```bash
+curl http://some-page.tld | grep -E '^[.0-9]+/[0-9]+$';
+```
+Consider to add a buffer in between:
+```
+curl http://some-page.tld | dd obs=1M 2>/dev/null | grep -E '^[.0-9]+/[0-9]+$';
+```
+
+See here: https://superuser.com/questions/554855/how-can-i-fix-a-broken-pipe-error/554896
+
+
 ## License
 
 **[MIT License](LICENSE)**
