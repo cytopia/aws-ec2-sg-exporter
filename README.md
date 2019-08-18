@@ -352,18 +352,18 @@ The exporter writes all errors to `stderr` regardless of using Docker or the sta
 
 ### Expected errors
 
-**An error occurred (RequestExpired) when calling the DescribeSecurityGroups operation: Request has expired.**
+**`An error occurred (RequestExpired) when calling the DescribeSecurityGroups operation: Request has expired.`**
 
 In case you are using IAM roles, your session has simply been expired and needs to be renewed.
 
 
-**[ERR] 2019-08-18 10:55:11 (aws-ec2-sg-exporter): No sg found by name: sg-name22 in region: us-east-1**
+**`[ERR] 2019-08-18 10:55:11 (aws-ec2-sg-exporter): No sg found by name: sg-name22 in region: us-east-1`**
 
 A security group could not be found by name and region. The exporter will continue to run and output
 Prometheus metrics, but will mark all desired/wanted IP CIDR as not found in your security group.
 
 
-**[ERR] 2019-08-18 10:56:17 (aws-ec2-sg-exporter): Multiple sg found by name: sg-name-* in region: us-east-1: sg-xxxxx,sg-yyyyy**
+**`[ERR] 2019-08-18 10:56:17 (aws-ec2-sg-exporter): Multiple sg found by name: sg-name-* in region: us-east-1: sg-xxxxx,sg-yyyyy`**
 
 Multiple security groups have been found by the specified name and region. The exporter will continue to run and output
 Prometheus metrics, but will mark all desired/wanted IP CIDR as not found in your security group.
@@ -371,7 +371,7 @@ Prometheus metrics, but will mark all desired/wanted IP CIDR as not found in you
 
 ### Unexpected errors
 
-**write error: Broken pipe**
+**`write error: Broken pipe`**
 
 This is a very rare condition and will most likely be caused by using broken shell pipes (`|`)
 in your commands specified via `SG*_IP4_CMD` or `SG*_IP6_CMD`.
