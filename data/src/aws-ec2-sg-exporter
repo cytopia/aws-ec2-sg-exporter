@@ -21,6 +21,43 @@ METRIC_NAME="aws_ec2_sg_compare"
 # -------------------------------------------------------------------------------------------------
 
 ###
+### Check if exactly one security group exists by filter
+### Output's all found security ids separated by newline.
+###
+### Returns 0 if one security group id was found
+### Returns 1 if no security group id was found
+### Returns 2 if more than 1 security group id was found
+###
+get_sg_ids() {
+	local name="${1}"
+	local region="${2}"
+	local count=0
+
+	for sg_id in $( \
+		aws ec2 describe-security-groups \
+			--region "${region}" \
+			--filters "Name=tag:Name,Values=${name}" \
+			--query 'SecurityGroups[*].GroupId' \
+			--output text \
+	); do
+		count=$(( count + 1))
+		echo "${sg_id}"
+	done
+
+	# No security group found
+	if [ "${count}" -eq "0" ]; then
+		return 1
+	# More than 1 security group found
+	elif [ "${count}" -gt "1" ]; then
+		return 2
+	fi
+
+	# Exactly one security group found
+	return 0
+}
+
+
+###
 ### Get newline-separated AWS Security Group IPv4 CIDR by name, protocol and from_port
 ###
 get_applied_sg_ip4_addr() {
@@ -88,15 +125,21 @@ print_prom_metric() {
 	local from_port="${4}"
 	local version="${5}"
 	local cidr="${6}"
-	local counter="${7}"
+	local sg_id="${7}"
+	local errno="${8}"
+	local error="${9}"
+	local counter="${10}"
 
-	printf "${METRIC_NAME}{name=\"%s\",region=\"%s\",proto=\"%s\",from_port=\"%s\",ip=\"%s\",cidr=\"%s\"} %s\n" \
+	printf "${METRIC_NAME}{name=\"%s\",region=\"%s\",proto=\"%s\",from_port=\"%s\",ip=\"%s\",cidr=\"%s\",id=\"%s\",errno=\"%s\",error=\"%s\"} %s\n" \
 		"${name}" \
 		"${region}" \
 		"${proto}" \
 		"${from_port}" \
 		"${version}" \
 		"${cidr}" \
+		"${sg_id}" \
+		"${errno}" \
+		"${error}" \
 		"${counter}"
 }
 
@@ -112,12 +155,39 @@ compare() {
 	local ip4_cmd="${5}"
 	local ip6_cmd="${6}"
 
+	local sg_ids=
+	local sg_ret=
+	local error=
+	local errno=
+
 	local applied=
 	local wanted=
 	local version=
 
-	if [ -n "${name:-}" ]; then
-		if [ -n "${ip4_cmd:-}" ]; then
+	if [ -n "${name}" ]; then
+
+		# Get found security group id's
+		set +e
+		sg_ids="$( get_sg_ids "${name}" "${region}" )"
+		sg_ret=$?
+		set -e
+
+		# Evalute possible errors on found/not-found security groups
+		if [ "${sg_ret}" -eq "0" ]; then
+			errno=0
+			error=""
+		elif [ "${sg_ret}" -eq "1" ]; then
+			errno=1
+			error="no sg found"
+			>&2 printf "[ERR] %s (%s): %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "aws-ec2-sg-exporter" "No sg found by name: ${name} in region: ${region}"
+		elif [ "${sg_ret}" -gt "1" ]; then
+			errno=2
+			error="multiple sg found"
+			sg_ids="$( echo "${sg_ids}" | paste -s -d, - )"
+			>&2 printf "[ERR] %s (%s): %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "aws-ec2-sg-exporter" "Multiple sg found by name: ${name} in region: ${region}: ${sg_ids}"
+		fi
+
+		if [ -n "${ip4_cmd}" ]; then
 			applied="$( get_applied_sg_ip4_addr "${name}" "${region}" "${from_port}" "${proto}" )"
 			wanted="$( get_wanted_sg_ip4_addr "${ip4_cmd}" )"
 			version="v4"
@@ -128,10 +198,16 @@ compare() {
 		fi
 
 		for ip in ${wanted}; do
-			if echo "${applied}" | dd obs=1M 2>/dev/null | grep -Eq "^${ip}\$"; then
-				print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "1"
+			# Exactly one security group found
+			if [ "${errno}" -eq "0" ]; then
+				if echo "${applied}" | dd obs=1M 2>/dev/null | grep -Eq "^${ip}\$"; then
+					print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "${sg_ids}" "${errno}" "${error}" "1"
+				else
+					print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "${sg_ids}" "${errno}" "${error}" "0"
+				fi
+			# Zero or more than one security group found
 			else
-				print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "0"
+				print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "" "${errno}" "${error}" "0"
 			fi
 		done
 	fi
