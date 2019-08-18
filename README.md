@@ -6,7 +6,8 @@
 **[Docker settings](#docker-settings)** |
 **[Metrics](#metrics)** |
 **[Examples](#examples)** |
-**[Grafana setup](#grafana-setup)**
+**[Grafana](#grafana-setup)** |
+**[Errors](#error-handling)**
 
 [![Build Status](https://travis-ci.com/cytopia/aws-ec2-sg-exporter.svg?branch=master)](https://travis-ci.com/cytopia/aws-ec2-sg-exporter)
 [![Tag](https://img.shields.io/github/tag/cytopia/aws-ec2-sg-exporter.svg)](https://github.com/cytopia/aws-ec2-sg-exporter/releases)
@@ -16,7 +17,7 @@
 [![](https://img.shields.io/badge/github-cytopia%2Faws--ec2--sg--exporter-red.svg)](https://github.com/cytopia/aws-ec2-sg-exporter "github.com/cytopia/aws-ec2-sg-exporter")
 [![License](https://img.shields.io/badge/license-MIT-%233DA639.svg)](https://opensource.org/licenses/MIT)
 
-![Grafana](doc/grafana-graph.png "Grafana Graph Example")
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-graph.png "Grafana Graph Example")
 
 A dockerized<strong><sup>[1]</sup></strong> Prometheus exporter that compares desired/wanted
 IPv4/IPv6 CIDR against currently applied inbound CIDR rules by protocol and port number in your AWS
@@ -326,11 +327,11 @@ As you can see, the second line ipv4 address returns a `0` and the last ipv6 add
 * Add you metrics by the name of your specified security group name
 * Set the legend to `{{ cidr }}` to have only the CIDR displayed
 
-![Grafana](doc/grafana-setup.png "Grafana Setup Example")
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-setup.png "Grafana Setup Example")
 
 Once this is done, your graph will look similar to this one:
 
-![Grafana](doc/grafana-graph.png "Grafana Graph Example")
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-graph.png "Grafana Graph Example")
 
 
 ## Usage without Docker
