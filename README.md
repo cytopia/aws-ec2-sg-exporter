@@ -204,7 +204,6 @@ docker run -it --rm \
 	\
 	-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
 	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-	-e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
 	\
 	-e SG1_NAME="my-sg" \
 	-e SG1_REGION="us-east-1" \
@@ -280,7 +279,6 @@ docker run -it --rm \
 	\
 	-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
 	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-	-e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
 	\
 	-e SG1_NAME="my-sg4" \
 	-e SG1_REGION="us-east-1" \
@@ -355,7 +353,8 @@ The exporter writes all errors to `stderr` regardless of using Docker or the sta
 
 **`An error occurred (RequestExpired) when calling the DescribeSecurityGroups operation: Request has expired.`**
 
-In case you are using IAM roles, your session has simply been expired and needs to be renewed.
+In case you are using IAM roles, your session has simply been expired and needs to be renewed. It
+is recommended to user IAM users instead without session.
 
 
 **`[ERR] 2019-08-18 10:55:11 (aws-ec2-sg-exporter): No sg found by name: sg-name22 in region: us-east-1`**
