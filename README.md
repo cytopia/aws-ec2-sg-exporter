@@ -17,7 +17,9 @@
 [![](https://img.shields.io/badge/github-cytopia%2Faws--ec2--sg--exporter-red.svg)](https://github.com/cytopia/aws-ec2-sg-exporter "github.com/cytopia/aws-ec2-sg-exporter")
 [![License](https://img.shields.io/badge/license-MIT-%233DA639.svg)](https://opensource.org/licenses/MIT)
 
-![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-dash.png "Grafana Graph Example")
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-dash-ok.png "Grafana Graph Example")
+
+![Grafana](https://raw.githubusercontent.com/cytopia/aws-ec2-sg-exporter/master/doc/grafana-dash-err.png "Grafana Graph Example")
 
 A dockerized<strong><sup>[1]</sup></strong> Prometheus exporter that compares desired/wanted
 IPv4/IPv6 CIDR against currently applied inbound CIDR rules by protocol and port number in your AWS
