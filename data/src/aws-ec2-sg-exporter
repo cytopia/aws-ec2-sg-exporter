@@ -184,7 +184,7 @@ compare() {
 			errno=2
 			error="multiple sg found"
 			sg_ids="$( echo "${sg_ids}" | paste -s -d, - )"
-			>&2 printf "[ERR] %s (%s): %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "aws-ec2-sg-exporter" "Multiple sg found by name: ${name} in region: ${region}: ${sg_ids}"
+			>&2 printf "[INFO] %s (%s): %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "aws-ec2-sg-exporter" "Multiple sg found by name: ${name} in region: ${region}: ${sg_ids}"
 		fi
 
 		if [ -n "${ip4_cmd}" ]; then
@@ -199,7 +199,7 @@ compare() {
 
 		for ip in ${wanted}; do
 			# Exactly one security group found
-			if [ "${errno}" -eq "0" ]; then
+			if [ "${errno}" -eq "0" ] || [ "${errno}" -eq "2" ] ; then
 				if echo "${applied}" | dd obs=1M 2>/dev/null | grep -Eq "^${ip}\$"; then
 					print_prom_metric "${name}" "${region}" "${proto}" "${from_port}" "${version}" "${ip}" "${sg_ids}" "${errno}" "${error}" "1"
 				else
